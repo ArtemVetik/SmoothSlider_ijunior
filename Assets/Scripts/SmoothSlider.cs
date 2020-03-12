@@ -10,9 +10,10 @@ public class SmoothSlider : MonoBehaviour
     [SerializeField] [Range(0.01f,0.5f)] private float _step;
 
     private Slider _health;
-    private Coroutine _damage, _heal;
+    private Coroutine _decrease, _increase;
     private WaitForSeconds _delay;
     private float _targetValue;
+    private float _delta;
 
     private void Awake()
     {
@@ -23,46 +24,43 @@ public class SmoothSlider : MonoBehaviour
     {
         _delay = new WaitForSeconds(_smooth);
         _targetValue = _health.value = 1f;
-        _damage = _heal = null;
+        _delta = 0.01f;
+        _decrease = _increase = null;
     }
 
-    public void GetDamage()
+    public void DecreaseValue()
     {
-        if (_heal != null)
-        {
-            StopCoroutine(_heal);
-            _heal = null;
-        }
+        TryStopCoroutine(ref _increase);
+        TryStopCoroutine(ref _decrease);
+
         _targetValue = Mathf.Clamp(_targetValue - _step, 0, 1f);
-        _damage = StartCoroutine(SmoothDamage());
+        _decrease = StartCoroutine(ChangeValue(_delta));
     }
 
-    public void GetHeal()
+    public void IncreaseValue()
     {
-        if (_damage != null)
-        {
-            StopCoroutine(_damage);
-            _damage = null;
-        }
+        TryStopCoroutine(ref _increase);
+        TryStopCoroutine(ref _decrease);
+
         _targetValue = Mathf.Clamp(_targetValue + _step, 0, 1f);
-        _heal = StartCoroutine(SmoothHeal());
+        _increase = StartCoroutine(ChangeValue(_delta));
     }
 
-    private IEnumerator SmoothDamage()
+    private IEnumerator ChangeValue(float delta)
     {
-        while (_health.value > _targetValue)
+        while (_health.value != _targetValue)
         {
-            _health.value -= 0.01f;
+            _health.value = Mathf.MoveTowards(_health.value, _targetValue, delta);
             yield return _delay;
         }
     }
 
-    private IEnumerator SmoothHeal()
+    private void TryStopCoroutine(ref Coroutine coroutine)
     {
-        while (_health.value < _targetValue)
-        {
-            _health.value += 0.01f;
-            yield return _delay;
-        }
+        if (coroutine == null)
+            return;
+
+        StopCoroutine(coroutine);
+        coroutine = null;
     }
 }
